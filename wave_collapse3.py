@@ -11,13 +11,11 @@ def solve_sudoku(grid):
 
     row, col = find_empty_cell(grid)
     if row == None and col == None:
-        return True
+        return True  
     for num in range(1, 10):
         if is_valid(grid, row, col, num):
             grid[row][col] = num
 
-            # print("Iteration: {0:d}".format(iterations))
-            # print(np.matrix(grid))
             if solve_sudoku(grid):
                 return True
 
