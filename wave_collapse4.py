@@ -2,7 +2,10 @@
 # https://www.youtube.com/watch?v=2SuvO4Gi7uY
 import numpy as np
 import random
+import math
+import copy
 
+iterations = 0
 
 #Example usage
 # sudoku_grid = [
@@ -70,46 +73,177 @@ sudoku_grid = [
     [0, 0, 0, 0, 0, 0, 4, 0, 0]
 ]
 
-
-def prep_grid(grid):
+def display_grid(grid):
     for i in range(9):
+        if i in [3, 6]:
+            print ('------+-------+------')
+        l = ""
         for j in range(9):
-            if grid[i][j] == 0:
-                grid[i][j] = 0b111111111
-            else:
-                grid[i][j] = 0b1 << (grid[i][j] - 1)
+            l += str(grid[i][j])
+            l += " | " if j in [2, 5] else " "
+        print(l)
 
-def collapse(grid):
+def display_superpositiongrid(grid):
+    for i in range(9):
+        if i in [3, 6]:
+            print ('------------+-------------+------------')
+        else:
+            print ('            |             |            ')
+        for row in range(0,3):
+            l = ""
+            for j in range(9):
+                p = grid[i][j]
+                for col in range(0,3): 
+                    a = p & (0b1 << row*3+col)
+                    l += str(int(math.log2(a))+1) if a != 0 else '.'
+                l += ' '
+                if j in (2,5):
+                    l += '| '
+            print(l)
+    print("")
+
+# we alter from positional grid with unknowns to superposition grid
+def superposition_grid(grid):
+    new_grid = []
+    for i in range(9):
+        new_row = []
+        for j in range(9):
+            # empty is all
+            if grid[i][j] == 0:
+                new_row += [0b111111111] # nine digit super position
+            else:
+                new_row += [0b1 << (grid[i][j] - 1)]
+        new_grid.append(new_row)
+    return new_grid
+
+# we observe the grid and collapse to knows/unknowns
+# note that if the grid is not solved, we introduce "errors"
+def observe_grid(grid):
+    new_grid = []
+    for i in range(9):
+        new_row = []
+        for j in range(9):
+            if grid[i][j] == 511:
+                new_row += [0]
+            else:
+                new_row += [int(math.log2(grid[i][j]))+1]
+        new_grid.append(new_row)
+    return new_grid
+
+# preparatory script to collapse superposition grid
+def collapse_grid(grid):
+    new_grid = copy.deepcopy(grid)
     for i in range(9):
         for j in range(9):
             if grid[i][j].bit_count() == 1:
-                num = grid[i][j]
-                mask = (0b1<<9) - 1 - num
-                for q in range(9):
-                    if q != j:
-                        grid[i][q] &= mask
-                    if q != i:
-                        grid[q][j] &= mask
-                # start_i = (i // 3) * 3
-                # start_j = (j // 3) * 3
-                # for i2 in range(start_i, start_i + 3):
-                #     for j2 in range(start_j, start_j + 3):
-                #         print ("[{0},{1}]".format(i2,j2), end="")
-                #         if i2 != i and j2 != j:
-                #             grid[i2][j2] &= mask
-                # print("")
+                propagate_bitvalue(new_grid, i, j, grid[i][j])
+    return new_grid
  
+def propagate_bitvalue(grid, row, col, num):
+    mask = (0b1<<9) - 1 - num
+    for q in range(9):
+        if q != col and grid[row][q].bit_count() > 1 and grid[row][q] & num:
+            grid[row][q] &= mask
+            if grid[row][q].bit_count() == 1 and not grid[row][q] & num:
+                propagate_bitvalue(grid, row, q, grid[row][q])
+        if q != row and grid[q][col].bit_count() > 1 and grid[q][col] & num:
+            grid[q][col] &= mask
+            if grid[q][col].bit_count() == 1 and not grid[q][col] & num:
+                propagate_bitvalue(grid, q, col, grid[q][col])
+    start_i = (row // 3) * 3
+    start_j = (col // 3) * 3
+    for i in range(start_i, start_i + 3):
+        for j in range(start_j, start_j + 3):
+            if i != row and grid[i][j].bit_count() > 1 and j != col and grid[i][j] & num:
+                grid[i][j] &= mask
+                if grid[i][j].bit_count() == 1 and not grid[i][j] & num:
+                    propagate_bitvalue(grid, i, j, grid[i][j])
+    grid[row][col] = num
 
-def entropy(grid):
+def calc_entropy(grid):
+    new_grid = []
+    for i in range(9):
+        new_row = []
+        for j in range(9):
+            new_row += [grid[i][j].bit_count()]
+        new_grid.append(new_row)
+    return new_grid
+
+def find_candidate(grid, entropy):
+    # find first candidate bottom left to top right
     for i in range(9):
         for j in range(9):
-            grid[i][j] = grid[i][j].bit_count()
+            if grid[i][j].bit_count() == entropy:
+                return i,j
+    return None, None
 
-print(np.matrix(sudoku_grid))
-prep_grid(sudoku_grid)
-print(np.matrix(sudoku_grid))
-collapse(sudoku_grid)
-print(np.matrix(sudoku_grid))
-entropy(sudoku_grid)
-print(np.matrix(sudoku_grid))
 
+def is_valid(grid, row, col, num):
+    # test rows and columns if num already exists
+    for i in range(9):
+        if grid[row][i] == num or grid[i][col] == num:
+            return False
+
+    # test adjecents if num already exists
+    start_row = (row // 3) * 3
+    start_col = (col // 3) * 3
+    for i in range(start_row, start_row + 3):
+        for j in range(start_col, start_col + 3):
+            if grid[i][j] == num:
+                return False
+
+    return True
+
+def iter_positions(snum):
+    for i in range(0,9):
+        if snum & 0b1 << i:
+            yield i+1
+
+def solve_sudoku(sgrid):
+    global iterations
+    iterations += 1
+
+    for i in range(9):
+        for j in range(9):
+            if sgrid[i][j] == 0:
+                return False
+    for entropy in range(2,10):
+        row, col = find_candidate(sgrid, entropy)
+        if row == None and col == None:
+            return True
+        else:
+            for num in iter_positions(sgrid[row][col]):
+                new_grid = copy.deepcopy(sgrid)
+                propagate_bitvalue(new_grid, row, col, 0b1 << num-1)
+                if solve_sudoku(new_grid):
+                    for i in range(9):
+                        for j in range(9):
+                            sgrid[i][j] = new_grid[i][j]
+                    return True
+    return False
+
+
+print("Start grid")
+display_grid(sudoku_grid)
+
+sg = superposition_grid(sudoku_grid)
+g2 = collapse_grid(sg)
+print(np.matrix(g2))
+# observe_grid(sudoku_grid)
+display_superpositiongrid(sg)
+# display_grid(observe_grid(sg))
+# print('')
+display_superpositiongrid(g2)
+# display_grid(observe_grid(g2))
+# print(np.matrix(sudoku_grid))
+print("Entropy grid")
+e = calc_entropy(g2)
+display_grid(e)
+
+print("Solution")
+if solve_sudoku(g2):
+    display_grid(observe_grid(g2))
+else:
+    print('No solution')
+print('Iterations: %d' % iterations)
+# print(np.matrix(sudoku_grid))
