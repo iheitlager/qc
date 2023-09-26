@@ -1,5 +1,7 @@
 # https://saturncloud.io/blog/python-sudoku-wave-function-collapse-algorithm-implementation/
 # https://www.youtube.com/watch?v=2SuvO4Gi7uY
+# https://www.boristhebrave.com/2020/04/13/wave-function-collapse-explained/
+
 import numpy as np
 import random
 import math
@@ -220,7 +222,7 @@ def is_valid(grid, row, col, num):
     return True
 
 def iter_positions(snum):
-    for i in range(0,9):
+    for i in range(9,0, -1):
         if snum & 0b1 << i:
             yield i+1
 
@@ -250,20 +252,19 @@ def solve_sudoku(sgrid, stack=[]):
     while not solved:
         while len(stack):
             propagate_bitvalue(sgrid, stack)
-        return False
-        # row, col, num = find_candidate(sgrid)
-        # if num == -1:
-        #     return False
-        # elif row == None and col == None:
-        #     solved = True
-        # else:
-        #     for n in iter_positions(num):
-        #         new_grid = copy.deepcopy(sgrid)
-        #         if solve_sudoku(new_grid, stack=[(row, col, n)]):
-        #             for i in range(9):
-        #                 for j in range(9):
-        #                     sgrid[i][j]=new_grid[i][j]
-        #             return True
+        row, col, num = find_candidate(sgrid)
+        if num == -1:
+            return False
+        elif row == None and col == None:
+            solved = True
+        else:
+            for n in iter_positions(num):
+                new_grid = copy.deepcopy(sgrid)
+                if solve_sudoku(new_grid, stack=[(row, col, n)]):
+                    for i in range(9):
+                        for j in range(9):
+                            sgrid[i][j]=new_grid[i][j]
+                    return True
     return True
 
 print("Start grid")
