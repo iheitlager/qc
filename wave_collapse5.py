@@ -1,6 +1,8 @@
 # https://saturncloud.io/blog/python-sudoku-wave-function-collapse-algorithm-implementation/
 # https://www.youtube.com/watch?v=2SuvO4Gi7uY
 # https://www.boristhebrave.com/2020/04/13/wave-function-collapse-explained/
+# https://www.matterlab.co/post/wave-function-collapse
+# https://link.springer.com/chapter/10.1007/978-3-031-43264-4_24
 
 import numpy as np
 import random

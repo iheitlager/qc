@@ -26,6 +26,16 @@ class CellTests(unittest.TestCase):
         self.assertTrue(int(c), 1)
         self.assertTrue(c.collapsed)
 
+    def test_values(self):
+        c = Cell()
+        self.assertTrue(c.values(), [1,2,3,4,5,6,7,8,9])
+        c.collapse(3)
+        self.assertTrue(c.values(), [1,2,4,5,6,7,8,9])
+        c.collapse(5)
+        self.assertTrue(c.values(), [1,2,4,6,7,8,9])
+        c.collapse(8)
+        self.assertTrue(c.values(), [1,2,4,5,6,7,9])
+
 
 class GridTests(unittest.TestCase):
     def test_instantiation(self):

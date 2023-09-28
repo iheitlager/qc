@@ -1,3 +1,5 @@
+import math
+
 def display_grid(grid):
     for i in range(9):
         if i in [3, 6]:
@@ -17,7 +19,7 @@ def display_superpositiongrid(grid):
         for row in range(0,3):
             l = ""
             for j in range(9):
-                p = grid[i][j]
+                p = grid[i][j].state
                 for col in range(0,3): 
                     a = p & (0b1 << row*3+col)
                     l += str(int(math.log2(a))+1) if a != 0 else '.'
