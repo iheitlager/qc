@@ -1,7 +1,7 @@
 .PHONY: test dev help
 
 test: ## run unittest suite
-	@pytest test
+	@pytest tests
 
 dev: ## setup for development
 	@pip install -e .

@@ -12,20 +12,21 @@ class Solver:
     def done(self):
         for i in range(9):
             for j in range(9):
-                if not self.grid[i][j].collapsed():
+                if not self.grid[i][j].collapsed:
                     return False
         return True
     
     def _prep(self, puzzle):
         if not puzzle:
             return
-        stack = []
         if type(puzzle) == str:
             i = 0
             for l in puzzle.split('\n'):
-                for j in range(9):
-                    stack.append((i,j,int(l[j])))
-                i += 1
+                if i < 9:
+                    for j in range(9):
+                        if l[j] in "123456789":
+                            self.stack.append((i,j,int(l[j])))
+                    i += 1
         else:
             for i in range(9):
                 for j in range(9):

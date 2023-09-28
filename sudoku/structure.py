@@ -51,7 +51,9 @@ class Grid:
                 self._grid[row][q].collapse(num)
             if q != row:
                 self._grid[q][col].collapse(num)
-        for i in range(start_i, start_i + 3):
-            for j in range(start_j, start_j + 3):
+        start_row = (row // 3) * 3
+        start_col = (col // 3) * 3
+        for i in range(start_row, start_row + 3):
+            for j in range(start_col, start_col + 3):
                 if i != row and j != col:
                     self._grid[i][j].collapse(num)
