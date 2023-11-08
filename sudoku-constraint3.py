@@ -66,9 +66,9 @@ for v in variables:
         problem.addVariable(v, range(1, 10))
     else:
         problem.addVariable(v, [value])
-print(lines)
-print(columns)
-print(groups)
+# print(lines)
+# print(columns)
+# print(groups)
 for group in groups:
     problem.addConstraint(AllDifferentConstraint(), group)
 for _, line in lines.items():
