@@ -1,4 +1,5 @@
 # https://saturncloud.io/blog/python-sudoku-wave-function-collapse-algorithm-implementation/
+# trying to randomize the search, but this does not terminate
 
 import numpy as np
 import random
@@ -34,12 +35,17 @@ def is_complete(grid):
     return True
 
 def find_empty_cell(grid):
+    cells = []
     found = False
     while not found:
         row = random.randint(0, 8)
         col = random.randint(0, 8)
+        if (row, col) not in cells:
+            cells += [(row, col)]
         if grid[row][col] == 0:
             return row, col
+        elif len(cells) == 81:
+            found = False
     return None, None
 
 def is_valid(grid, row, col, num):

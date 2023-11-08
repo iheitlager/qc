@@ -4,6 +4,7 @@
 
 import numpy as np
 import random
+import sys
 import math
 import copy
 
@@ -63,37 +64,37 @@ iterations = 0
 # ]
 
 # Parool Dinsdag 19 sept ****
-sudoku_grid = [
-    [0, 6, 0, 0, 0, 0, 1, 9, 0],
-    [0, 0, 2, 6, 1, 0, 0, 0, 4],
-    [7, 0, 1, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 7, 0, 0, 1, 0],
-    [0, 0, 6, 0, 8, 3, 0, 0, 0],
-    [5, 4, 0, 0, 6, 0, 0, 0, 3],
-    [0, 8, 0, 0, 2, 7, 0, 3, 9],
-    [0, 0, 0, 4, 0, 0, 0, 7, 8],
-    [0, 0, 0, 0, 0, 0, 4, 0, 0]
-]
+# sudoku_grid = [
+#     [0, 6, 0, 0, 0, 0, 1, 9, 0],
+#     [0, 0, 2, 6, 1, 0, 0, 0, 4],
+#     [7, 0, 1, 0, 0, 0, 0, 0, 0],
+#     [0, 0, 0, 0, 7, 0, 0, 1, 0],
+#     [0, 0, 6, 0, 8, 3, 0, 0, 0],
+#     [5, 4, 0, 0, 6, 0, 0, 0, 3],
+#     [0, 8, 0, 0, 2, 7, 0, 3, 9],
+#     [0, 0, 0, 4, 0, 0, 0, 7, 8],
+#     [0, 0, 0, 0, 0, 0, 4, 0, 0]
+# ]
 
-class Cell:
-    def __init__(self):
-        self.collapsed = False
-        self.state = 0b111111111
+def get_matrix(filename):
+    """Return a list of lists containing the content of the input text file.
 
-    def collapse(self, value=None, bit=None):
-        if self.collapsed:
-            return
-        if value:
-            num = 0b1 << value -1
-        elif bit:
-            num = bit
-        mask = (0b1<<9) - 1 - num
-        self.state &= mask 
-        if self.state.bit_count() == 1:
-            self.collapsed = True
+    Note: each line of the text file corresponds to a list. Each item in
+    the list is from splitting the line of text by the whitespace ' '.
+    """
+    with open(filename, "r") as f:
+        content = f.readlines()
 
-    def __int__(self):
-        return int(math.log2(self.state))+1
+    lines = []
+    for line in content:
+        new_line = line.rstrip()    # Strip any whitespace after last value
+
+        if new_line:
+            new_line = list(map(int, new_line.split(' ')))
+            lines.append(new_line)
+
+    return lines
+
     
 
 def display_grid(grid):
@@ -124,6 +125,9 @@ def display_superpositiongrid(grid):
                     l += '| '
             print(l)
     print("")
+
+
+
 
 def prep_stack(grid):
     stack = []
@@ -171,15 +175,7 @@ def observe_grid(grid):
         new_grid.append(new_row)
     return new_grid
 
-# preparatory script to collapse superposition grid
-def collapse_grid(grid):
-    new_grid = copy.deepcopy(grid)
-    for i in range(9):
-        for j in range(9):
-            if grid[i][j].bit_count() == 1:
-                propagate_bitvalue(new_grid, i, j, grid[i][j])
-    return new_grid
- 
+
 def propagate_bitvalue(grid, stack):
     row, col, _n =stack.pop()
     num = 0b1 << _n -1
@@ -188,11 +184,11 @@ def propagate_bitvalue(grid, stack):
         if q != col and grid[row][q].bit_count() > 1 and grid[row][q] & num:
             grid[row][q] &= mask
             if grid[row][q].bit_count() == 1 and not grid[row][q] & num:
-                stack.append((row, q, grid[row][q]))
+                stack.append((row, q, int(math.log2(grid[row][q]))+1))
         if q != row and grid[q][col].bit_count() > 1 and grid[q][col] & num:
             grid[q][col] &= mask
             if grid[q][col].bit_count() == 1 and not grid[q][col] & num:
-                stack.append((q, col, grid[q][col]))
+                stack.append((q, col, int(math.log2(grid[q][col]))+1))
     start_i = (row // 3) * 3
     start_j = (col // 3) * 3
     for i in range(start_i, start_i + 3):
@@ -200,17 +196,8 @@ def propagate_bitvalue(grid, stack):
             if i != row and j != col and grid[i][j].bit_count() > 1  and grid[i][j] & num:
                 grid[i][j] &= mask
                 if grid[i][j].bit_count() == 1 and not grid[i][j] & num:
-                    stack.append((i, j, grid[i][j]))
+                    stack.append((i, j, int(math.log2(grid[i][j]))+1))
     grid[row][col] = num
-
-def calc_entropy(grid):
-    new_grid = []
-    for i in range(9):
-        new_row = []
-        for j in range(9):
-            new_row += [grid[i][j].bit_count()]
-        new_grid.append(new_row)
-    return new_grid
 
 def find_candidate(grid):
     # find first candidate bottom left to top right
@@ -218,10 +205,10 @@ def find_candidate(grid):
         for i in range(9):
             for j in range(9):
                 if grid[i][j] == 0:
-                    return None, None, -1
+                    return None, None
                 elif grid[i][j].bit_count() == entropy:
-                    return i,j, grid[i][j]
-    return None, None, None
+                    return i,j
+    return None, None
 
 
 def is_valid(grid, row, col, num):
@@ -245,78 +232,57 @@ def iter_positions(snum):
         if snum & 0b1 << i:
             yield i+1
 
-# def solve_sudoku(sgrid):
-#     global iterations
-#     iterations += 1
-
-#     for entropy in range(1,10):
-#         row, col = find_candidate(sgrid, entropy)
-#         if row == None and col == None:
-#             return True
-#         else:
-#             for num in iter_positions(sgrid[row][col]):
-#                 new_grid = copy.deepcopy(sgrid)
-#                 propagate_bitvalue(new_grid, row, col, 0b1 << num-1)
-#                 if solve_sudoku(new_grid):
-#                     for i in range(9):
-#                         for j in range(9):
-#                             sgrid[i][j] = new_grid[i][j]
-#                     return True
-#     return False
+def is_complete(grid):
+    for row in range(9):
+        for col in range(9):
+            if grid[row][col].bit_count() > 1 or grid[row][col].bit_count() == 0:
+                return False
+    return True
 
 def solve_sudoku(sgrid, stack=[]):
     global iterations
     iterations += 1
-    solved = False
-    while not solved:
+    while True:
         while len(stack):
             propagate_bitvalue(sgrid, stack)
-    #     row, col, num = find_candidate(sgrid)
-    #     if num == -1:
-    #         return False
-    #     elif row == None and col == None:
-    #         solved = True
-    #     else:
-    #         for n in iter_positions(num):
-    #             new_grid = copy.deepcopy(sgrid)
-    #             if solve_sudoku(new_grid, stack=[(row, col, n)]):
-    #                 for i in range(9):
-    #                     for j in range(9):
-    #                         sgrid[i][j]=new_grid[i][j]
-    #                 return True
-    # return True
+        if is_complete(sgrid):
+            return True
+        row, col = find_candidate(sgrid)
+        if row == None and col == None:
+            return False
+        for n in iter_positions(sgrid[row][col]):
+            # print("Backtrack (%d,%d) = %d" % (row, col, n))
+            new_grid = copy.deepcopy(sgrid)
+            if solve_sudoku(new_grid, stack=[(row, col, n)]):
+                for i in range(9):
+                    for j in range(9):
+                        sgrid[i][j]=new_grid[i][j]                
+                return True
+            else:
+                return False
+        return False
 
-print("Start grid")
-display_grid(sudoku_grid)
+
+if __name__ == "__main__":
+    # Read user input
+    if len(sys.argv) > 1:
+        filename = sys.argv[1]
+    else:
+        filename = "problem.txt"
+        print("Warning: using default problem file, '{}'. Usage: python "
+              "{} <sudoku filepath>".format(filename, sys.argv[0]))
+
+    # Read sudoku problem as matrix
+    sudoku_grid = get_matrix(filename)
+
+    # print("Start grid")
+    # display_grid(sudoku_grid)
 
 
-sg = fill_superposition_grid()
-display_superpositiongrid(sg)
-solve_sudoku(sg, prep_stack(sudoku_grid))
-display_superpositiongrid(sg)
-# display_grid(observe_grid(sg))
-# print("Entropy grid")
-# e = calc_entropy(sg)
-# display_grid(e)
+    sg = fill_superposition_grid()
+    # display_superpositiongrid(sg)
+    solve_sudoku(sg, prep_stack(sudoku_grid))
+    # display_superpositiongrid(sg)
+    display_grid(observe_grid(sg))
 
-# sg = superposition_grid(sudoku_grid)
-# g2 = collapse_grid(sg)
-# print(np.matrix(g2))
-# # observe_grid(sudoku_grid)
-# display_superpositiongrid(sg)
-# # display_grid(observe_grid(sg))
-# # print('')
-# display_superpositiongrid(g2)
-# # display_grid(observe_grid(g2))
-# # print(np.matrix(sudoku_grid))
-# print("Entropy grid")
-# e = calc_entropy(g2)
-# display_grid(e)
-
-# print("Solution")
-# if solve_sudoku(g2):
-#     display_grid(observe_grid(g2))
-# else:
-#     print('No solution')
-print('Iterations: %d' % iterations)
-# # print(np.matrix(sudoku_grid))
+    print('Iterations: %d' % iterations)
