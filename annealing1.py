@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# https://www.adrian.idv.hk/2019-01-30-simanneal/
+
 
 import copy
 import random
